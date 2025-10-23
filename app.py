@@ -23,7 +23,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<h1 class="main-header">✂️ YouTube Video Cutter</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #666;">Upload CSV → Get Cut Videos in ZIP 🚀</p>', unsafe_allow_html=True)
+st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #666;">Upload CSV → Get Cut Videos in ZIP</p>', unsafe_allow_html=True)
 
 def sanitize_filename(text):
     text = re.sub(r'[<>:"/\\|?*\n\r]', '', text)
@@ -34,23 +34,14 @@ def download_youtube_video(url, output_path, status_placeholder):
     try:
         status_placeholder.text("📡 Connexion YouTube...")
         yt = YouTube(url)
-        
         status_placeholder.text("📡 Sélection qualité...")
-        stream = (yt.streams.filter(progressive=True, file_extension='mp4')
-                 .order_by('resolution')
-                 .desc()
-                 .first())
-        
+        stream = yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first()
         if not stream:
             stream = yt.streams.filter(file_extension='mp4').first()
-        
         if not stream:
             return False
-        
         status_placeholder.text("⬇️ Téléchargement...")
-        stream.download(output_path=os.path.dirname(output_path), 
-                       filename=os.path.basename(output_path))
-        
+        stream.download(output_path=os.path.dirname(output_path), filename=os.path.basename(output_path))
         return os.path.exists(output_path)
     except Exception as e:
         status_placeholder.text(f"❌ {str(e)[:50]}")
@@ -59,34 +50,15 @@ def download_youtube_video(url, output_path, status_placeholder):
 def cut_video_ffmpeg(input_path, start, end, output_path, status_placeholder):
     try:
         status_placeholder.text("✂️ Découpage...")
-        
-        # Essayer copie directe (rapide)
-        cmd = [
-            'ffmpeg', '-i', input_path, 
-            '-ss', str(start), '-to', str(end),
-            '-c', 'copy', '-y', output_path, 
-            '-loglevel', 'error'
-        ]
-        
+        cmd = ['ffmpeg', '-i', input_path, '-ss', str(start), '-to', str(end), '-c', 'copy', '-y', output_path, '-loglevel', 'error']
         result = subprocess.run(cmd, capture_output=True, timeout=60)
-        
         if result.returncode == 0 and os.path.exists(output_path):
             return True
-        
-        # Sinon réencoder
-        cmd = [
-            'ffmpeg', '-i', input_path,
-            '-ss', str(start), '-to', str(end),
-            '-c:v', 'libx264', '-c:a', 'aac',
-            '-b:v', '400k', '-preset', 'ultrafast',
-            '-y', output_path, '-loglevel', 'error'
-        ]
-        
+        cmd = ['ffmpeg', '-i', input_path, '-ss', str(start), '-to', str(end), '-c:v', 'libx264', '-c:a', 'aac', '-b:v', '400k', '-preset', 'ultrafast', '-y', output_path, '-loglevel', 'error']
         result = subprocess.run(cmd, capture_output=True, timeout=120)
         return result.returncode == 0 and os.path.exists(output_path)
-    
     except Exception as e:
-        status_placeholder.text(f"❌ Découpage: {str(e)[:50]}")
+        status_placeholder.text(f"❌ {str(e)[:30]}")
         return False
 
 def process_videos(df, temp_dir, progress_bar, status_text):
@@ -94,57 +66,41 @@ def process_videos(df, temp_dir, progress_bar, status_text):
     temp_download_dir = os.path.join(temp_dir, 'temp')
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(temp_download_dir, exist_ok=True)
-    
     total = len(df)
     success = 0
     errors = []
-    
     detail_status = st.empty()
-    
     for index, row in df.iterrows():
         try:
             progress = (index + 1) / total
             progress_bar.progress(progress)
             status_text.text(f"🔄 Vidéo {index+1}/{total}")
-            
             url = str(row['videoUrl']).strip()
             start = int(row['startTime'])
             end = int(row['endTime'])
             question = str(row['questionText']).strip()
-            
             if not url.startswith('http') or start >= end:
                 errors.append(f"Ligne {index+1}: Données invalides")
                 continue
-            
             filename_base = sanitize_filename(question)
             if len(filename_base) < 3:
                 filename_base = f"video_{index+1}"
-            
             filename = f"{filename_base}_{start}_{end}.mp4"
             temp_file = os.path.join(temp_download_dir, f'temp_{index}.mp4')
             output_file = os.path.join(output_dir, filename)
-            
-            # Télécharger
             if not download_youtube_video(url, temp_file, detail_status):
                 errors.append(f"Ligne {index+1}: Téléchargement échoué")
                 continue
-            
-            # Découper avec FFmpeg
             if cut_video_ffmpeg(temp_file, start, end, output_file, detail_status):
                 success += 1
                 detail_status.text(f"✅ Vidéo {index+1} OK!")
             else:
                 errors.append(f"Ligne {index+1}: Découpage échoué")
-            
-            # Nettoyer
             if os.path.exists(temp_file):
                 os.remove(temp_file)
-            
             time.sleep(random.uniform(1, 2))
-        
         except Exception as e:
             errors.append(f"Ligne {index+1}: {str(e)[:50]}")
-    
     return success, errors, output_dir
 
 def create_zip(source_dir):
@@ -158,7 +114,6 @@ def create_zip(source_dir):
     zip_buffer.seek(0)
     return zip_buffer
 
-# Interface
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.markdown("---")
@@ -169,15 +124,12 @@ if uploaded_file:
         df = pd.read_csv(uploaded_file)
         required = ['videoUrl', 'startTime', 'endTime', 'questionText']
         missing = [c for c in required if c not in df.columns]
-        
         if missing:
             st.error(f"❌ Colonnes manquantes: {', '.join(missing)}")
         else:
             st.success(f"✅ {len(df)} lignes")
-            
             with st.expander("📋 Aperçu"):
                 st.dataframe(df.head())
-            
             c1, c2, c3, c4 = st.columns(4)
             with c1:
                 st.markdown(f'<div class="stats-box"><h3>📝</h3><h2>{len(df)}</h2></div>', unsafe_allow_html=True)
@@ -187,29 +139,23 @@ if uploaded_file:
                 st.markdown(f'<div class="stats-box"><h3>⏱️</h3><h2>{int((df["endTime"]-df["startTime"]).mean())}s</h2></div>', unsafe_allow_html=True)
             with c4:
                 st.markdown(f'<div class="stats-box"><h3>🎞️</h3><h2>{int((df["endTime"]-df["startTime"]).sum()/60)}m</h2></div>', unsafe_allow_html=True)
-            
             st.markdown("---")
-            
             if st.button("🚀 LANCER", type="primary", use_container_width=True):
                 with tempfile.TemporaryDirectory() as td:
                     st.markdown("### 🔄 Traitement...")
                     pb = st.progress(0)
                     st_text = st.empty()
-                    
                     s, e, od = process_videos(df, td, pb, st_text)
-                    
                     st.markdown("---")
                     c1, c2 = st.columns(2)
                     with c1:
                         st.markdown(f'<div class="success-box"><h3>✅</h3><h2>{s}/{len(df)}</h2><p>{s/len(df)*100:.1f}%</p></div>', unsafe_allow_html=True)
                     with c2:
                         st.markdown(f'<div class="error-box"><h3>❌</h3><h2>{len(e)}/{len(df)}</h2><p>{len(e)/len(df)*100:.1f}%</p></div>', unsafe_allow_html=True)
-                    
                     if e:
                         with st.expander(f"⚠️ {len(e)} échecs"):
                             for err in e[:20]:
                                 st.text(err)
-                    
                     if s > 0:
                         zb = create_zip(od)
                         st.download_button("⬇️ ZIP", zb, "videos.zip", "application/zip", type="primary")
@@ -220,13 +166,4 @@ else:
     st.info("📤 Uploadez CSV: videoUrl, startTime, endTime, questionText")
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: gray;'>Made for Lyra | v2.1</p>", unsafe_allow_html=True)
-```
-
----
-
-**Et `requirements.txt` simplifié:**
-```
-streamlit
-pandas
-pytube
+st.markdown("<p style='text-align: center; color: gray;'>Made for Lyra</p>", unsafe_allow_html=True)
