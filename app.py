@@ -8,8 +8,8 @@ import shutil
 import tempfile
 from io import BytesIO
 import zipfile
+import subprocess
 from pytube import YouTube
-from moviepy.editor import VideoFileClip
 
 st.set_page_config(page_title="YouTube Video Cutter", page_icon="✂️", layout="wide")
 
@@ -32,11 +32,10 @@ def sanitize_filename(text):
 
 def download_youtube_video(url, output_path, status_placeholder):
     try:
-        status_placeholder.text("📡 Connexion à YouTube...")
+        status_placeholder.text("📡 Connexion YouTube...")
         yt = YouTube(url)
         
-        status_placeholder.text("📡 Sélection du stream...")
-        # Essayer plusieurs qualités
+        status_placeholder.text("📡 Sélection qualité...")
         stream = (yt.streams.filter(progressive=True, file_extension='mp4')
                  .order_by('resolution')
                  .desc()
@@ -54,40 +53,40 @@ def download_youtube_video(url, output_path, status_placeholder):
         
         return os.path.exists(output_path)
     except Exception as e:
-        status_placeholder.text(f"❌ Erreur: {str(e)[:50]}")
+        status_placeholder.text(f"❌ {str(e)[:50]}")
         return False
 
-def cut_video(input_path, start, end, output_path, status_placeholder):
+def cut_video_ffmpeg(input_path, start, end, output_path, status_placeholder):
     try:
-        status_placeholder.text("✂️ Découpage vidéo...")
-        video = VideoFileClip(input_path)
+        status_placeholder.text("✂️ Découpage...")
         
-        # Ajuster temps si nécessaire
-        if start >= video.duration:
-            video.close()
-            return False
+        # Essayer copie directe (rapide)
+        cmd = [
+            'ffmpeg', '-i', input_path, 
+            '-ss', str(start), '-to', str(end),
+            '-c', 'copy', '-y', output_path, 
+            '-loglevel', 'error'
+        ]
         
-        actual_end = min(end, video.duration)
+        result = subprocess.run(cmd, capture_output=True, timeout=60)
         
-        # Découper
-        cut_clip = video.subclip(start, actual_end)
+        if result.returncode == 0 and os.path.exists(output_path):
+            return True
         
-        # Sauvegarder
-        cut_clip.write_videofile(
-            output_path,
-            codec='libx264',
-            audio_codec='aac',
-            preset='ultrafast',
-            verbose=False,
-            logger=None
-        )
+        # Sinon réencoder
+        cmd = [
+            'ffmpeg', '-i', input_path,
+            '-ss', str(start), '-to', str(end),
+            '-c:v', 'libx264', '-c:a', 'aac',
+            '-b:v', '400k', '-preset', 'ultrafast',
+            '-y', output_path, '-loglevel', 'error'
+        ]
         
-        cut_clip.close()
-        video.close()
-        
-        return os.path.exists(output_path)
+        result = subprocess.run(cmd, capture_output=True, timeout=120)
+        return result.returncode == 0 and os.path.exists(output_path)
+    
     except Exception as e:
-        status_placeholder.text(f"❌ Erreur découpage: {str(e)[:50]}")
+        status_placeholder.text(f"❌ Découpage: {str(e)[:50]}")
         return False
 
 def process_videos(df, temp_dir, progress_bar, status_text):
@@ -130,10 +129,10 @@ def process_videos(df, temp_dir, progress_bar, status_text):
                 errors.append(f"Ligne {index+1}: Téléchargement échoué")
                 continue
             
-            # Découper
-            if cut_video(temp_file, start, end, output_file, detail_status):
+            # Découper avec FFmpeg
+            if cut_video_ffmpeg(temp_file, start, end, output_file, detail_status):
                 success += 1
-                detail_status.text(f"✅ Vidéo {index+1} créée!")
+                detail_status.text(f"✅ Vidéo {index+1} OK!")
             else:
                 errors.append(f"Ligne {index+1}: Découpage échoué")
             
@@ -145,11 +144,6 @@ def process_videos(df, temp_dir, progress_bar, status_text):
         
         except Exception as e:
             errors.append(f"Ligne {index+1}: {str(e)[:50]}")
-            if os.path.exists(temp_file):
-                try:
-                    os.remove(temp_file)
-                except:
-                    pass
     
     return success, errors, output_dir
 
@@ -168,8 +162,7 @@ def create_zip(source_dir):
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     st.markdown("---")
-    uploaded_file = st.file_uploader("📤 Upload CSV", type=['csv'], 
-                                     help="videoUrl, startTime, endTime, questionText")
+    uploaded_file = st.file_uploader("📤 Upload CSV", type=['csv'])
 
 if uploaded_file:
     try:
@@ -180,95 +173,60 @@ if uploaded_file:
         if missing:
             st.error(f"❌ Colonnes manquantes: {', '.join(missing)}")
         else:
-            st.success(f"✅ CSV chargé: {len(df)} lignes")
+            st.success(f"✅ {len(df)} lignes")
             
-            with st.expander("📋 Aperçu (5 premières lignes)"):
-                st.dataframe(df.head(), use_container_width=True)
+            with st.expander("📋 Aperçu"):
+                st.dataframe(df.head())
             
             c1, c2, c3, c4 = st.columns(4)
             with c1:
-                st.markdown(f'<div class="stats-box"><h3>📝</h3><p>Total</p><h2>{len(df)}</h2></div>', 
-                           unsafe_allow_html=True)
+                st.markdown(f'<div class="stats-box"><h3>📝</h3><h2>{len(df)}</h2></div>', unsafe_allow_html=True)
             with c2:
-                st.markdown(f'<div class="stats-box"><h3>🎬</h3><p>URLs</p><h2>{df["videoUrl"].nunique()}</h2></div>', 
-                           unsafe_allow_html=True)
+                st.markdown(f'<div class="stats-box"><h3>🎬</h3><h2>{df["videoUrl"].nunique()}</h2></div>', unsafe_allow_html=True)
             with c3:
-                avg = int((df['endTime'] - df['startTime']).mean())
-                st.markdown(f'<div class="stats-box"><h3>⏱️</h3><p>Moy.</p><h2>{avg}s</h2></div>', 
-                           unsafe_allow_html=True)
+                st.markdown(f'<div class="stats-box"><h3>⏱️</h3><h2>{int((df["endTime"]-df["startTime"]).mean())}s</h2></div>', unsafe_allow_html=True)
             with c4:
-                total_min = int((df['endTime'] - df['startTime']).sum() / 60)
-                st.markdown(f'<div class="stats-box"><h3>🎞️</h3><p>Total</p><h2>{total_min}m</h2></div>', 
-                           unsafe_allow_html=True)
+                st.markdown(f'<div class="stats-box"><h3>🎞️</h3><h2>{int((df["endTime"]-df["startTime"]).sum()/60)}m</h2></div>', unsafe_allow_html=True)
             
             st.markdown("---")
             
-            col1, col2, col3 = st.columns([1, 1, 1])
-            with col2:
-                if st.button("🚀 LANCER LE DÉCOUPAGE", type="primary", use_container_width=True):
-                    with tempfile.TemporaryDirectory() as temp_dir:
-                        st.markdown("### 🔄 Traitement en cours...")
-                        progress_bar = st.progress(0)
-                        status_text = st.empty()
-                        
-                        success, errors, output_dir = process_videos(df, temp_dir, progress_bar, status_text)
-                        
-                        st.markdown("---")
-                        st.markdown("### 📊 Résultats")
-                        
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            success_pct = (success / len(df) * 100) if len(df) > 0 else 0
-                            st.markdown(f'<div class="success-box"><h3>✅ Succès</h3><h2>{success}/{len(df)}</h2><p>{success_pct:.1f}%</p></div>', 
-                                       unsafe_allow_html=True)
-                        with c2:
-                            error_pct = (len(errors) / len(df) * 100) if len(df) > 0 else 0
-                            st.markdown(f'<div class="error-box"><h3>❌ Échecs</h3><h2>{len(errors)}/{len(df)}</h2><p>{error_pct:.1f}%</p></div>', 
-                                       unsafe_allow_html=True)
-                        
-                        if errors:
-                            with st.expander(f"⚠️ Détails des {len(errors)} échecs"):
-                                for error in errors[:20]:
-                                    st.text(f"• {error}")
-                                if len(errors) > 20:
-                                    st.text(f"... et {len(errors) - 20} autres")
-                        
-                        if success > 0:
-                            st.markdown("---")
-                            with st.spinner("📦 Création du ZIP..."):
-                                zip_buffer = create_zip(output_dir)
-                                zip_size = len(zip_buffer.getvalue()) / (1024 * 1024)
-                                
-                                st.success(f"✅ ZIP créé: {zip_size:.1f} MB avec {success} vidéos")
-                                
-                                st.download_button(
-                                    "⬇️ TÉLÉCHARGER LE ZIP",
-                                    data=zip_buffer,
-                                    file_name="videos_decoupees.zip",
-                                    mime="application/zip",
-                                    type="primary",
-                                    use_container_width=True
-                                )
-                                
-                                st.balloons()
-                        else:
-                            st.error("❌ Aucune vidéo n'a pu être créée. Vérifiez les erreurs ci-dessus.")
-    
-    except Exception as e:
-        st.error(f"❌ Erreur: {str(e)}")
-
+            if st.button("🚀 LANCER", type="primary", use_container_width=True):
+                with tempfile.TemporaryDirectory() as td:
+                    st.markdown("### 🔄 Traitement...")
+                    pb = st.progress(0)
+                    st_text = st.empty()
+                    
+                    s, e, od = process_videos(df, td, pb, st_text)
+                    
+                    st.markdown("---")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.markdown(f'<div class="success-box"><h3>✅</h3><h2>{s}/{len(df)}</h2><p>{s/len(df)*100:.1f}%</p></div>', unsafe_allow_html=True)
+                    with c2:
+                        st.markdown(f'<div class="error-box"><h3>❌</h3><h2>{len(e)}/{len(df)}</h2><p>{len(e)/len(df)*100:.1f}%</p></div>', unsafe_allow_html=True)
+                    
+                    if e:
+                        with st.expander(f"⚠️ {len(e)} échecs"):
+                            for err in e[:20]:
+                                st.text(err)
+                    
+                    if s > 0:
+                        zb = create_zip(od)
+                        st.download_button("⬇️ ZIP", zb, "videos.zip", "application/zip", type="primary")
+                        st.balloons()
+    except Exception as ex:
+        st.error(f"❌ {ex}")
 else:
-    st.markdown("---")
-    st.info("📤 **Uploadez un fichier CSV** avec les colonnes: videoUrl, startTime, endTime, questionText")
-    
-    st.markdown("### 📄 Exemple de CSV")
-    example = pd.DataFrame({
-        'videoUrl': ['https://www.youtube.com/watch?v=dQw4w9WgXcQ'],
-        'startTime': [30],
-        'endTime': [45],
-        'questionText': ['Example question']
-    })
-    st.dataframe(example, use_container_width=True)
+    st.info("📤 Uploadez CSV: videoUrl, startTime, endTime, questionText")
 
 st.markdown("---")
-st.markdown("<p style='text-align: center; color: gray;'>Made with ❤️ for Lyra | v2.0</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: gray;'>Made for Lyra | v2.1</p>", unsafe_allow_html=True)
+```
+
+---
+
+**Et `requirements.txt` simplifié:**
+```
+streamlit
+pandas
+pytube
