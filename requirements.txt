@@ -2,213 +2,54 @@ streamlit==1.32.0
 pandas==2.2.2
 ```
 
-4. Cliquez **"Commit new file"**
-
-✅ **Fichier 2/3 ajouté!**
+4. **Scrollez en bas**, cliquez **"Commit new file"** (bouton vert)
 
 ---
 
-### **E. Ajouter fichier 3/3: `packages.txt`**
+✅ **Fichier 2/3 créé!**
 
-1. Cliquez **"Add file"** → **"Create new file"**
-2. Nom: `packages.txt`
-3. Contenu:
+---
+
+## **FICHIER 3/3: `packages.txt`**
+
+Maintenant le dernier fichier:
+
+1. **Cliquez à nouveau** **"Add file"** → **"Create new file"**
+
+2. **Nom du fichier:** Tapez exactement `packages.txt`
+
+3. **Copiez-collez ce contenu:**
 ```
 ffmpeg
 yt-dlp
 ```
 
-4. Cliquez **"Commit new file"**
-
-✅ **Fichier 3/3 ajouté!**
+4. **Scrollez en bas**, cliquez **"Commit new file"**
 
 ---
 
-**Vérification:** Votre repo doit maintenant contenir 4 fichiers:
-- ✅ `README.md`
-- ✅ `app.py`
-- ✅ `requirements.txt`
-- ✅ `packages.txt`
+✅ **Fichier 3/3 créé!**
 
-**Screenshot attendu:**
+---
+
+## **VÉRIFICATION:**
+
+Votre repo doit maintenant contenir **4 fichiers:**
 ```
-📁 youtube-video-cutter
+📁 youtube-video-cutter/
    📄 README.md
    📄 app.py
    📄 packages.txt
    📄 requirements.txt
 ```
 
----
-
-## **ÉTAPE 2: Créer compte Streamlit Cloud** ⭐
-
-### **A. Inscription**
-
-1. Allez sur **https://share.streamlit.io/** (ou https://streamlit.io/cloud)
-2. Cliquez **"Sign up"** ou **"Get started"**
-3. **Méthode recommandée:** Cliquez **"Continue with GitHub"**
-   - Cela lie automatiquement votre compte GitHub
-   - Plus facile pour déploiement!
-4. GitHub va demander autorisation:
-   - Cliquez **"Authorize Streamlit"**
-5. Streamlit peut demander quelques infos:
-   - **Email:** confirmez votre email
-   - **Company/Organization:** (optionnel, laissez vide ou mettez "Personal")
-
-✅ **Compte Streamlit Cloud créé!**
-
----
-
-### **B. Dashboard Streamlit**
-
-Vous arrivez sur le **Dashboard Streamlit Cloud**.
-
-Vous devriez voir:
-- Aucune app pour l'instant
-- Bouton **"New app"** ou **"Create app"**
-
----
-
-## **ÉTAPE 3: Déployer votre app** ⭐
-
-### **A. Créer nouvelle app**
-
-1. Sur Dashboard Streamlit, cliquez **"New app"** (gros bouton)
-2. Fenêtre s'ouvre avec formulaire:
-
-**Remplissez comme suit:**
-
-**Repository:**
-- Sélectionnez dans dropdown: `votre-username/youtube-video-cutter`
-- Si vous ne le voyez pas, cliquez "Connect a different GitHub repository"
-
-**Branch:**
-- Laissez: `main` (par défaut)
-
-**Main file path:**
-- Tapez exactement: `app.py`
-
-**App URL (optional):**
-- Streamlit génère automatiquement: `votre-username-youtube-video-cutter`
-- Ou personnalisez: `lyra-video-cutter` par exemple
-
-3. Cliquez **"Deploy!"** (gros bouton rouge)
-
----
-
-### **B. Attendre déploiement**
-
-⏱️ **Durée: 5-10 minutes**
-
-Vous verrez écran avec logs en temps réel:
+**Screenshot de ce que vous devriez voir:**
 ```
-🎈 Launching your app...
-📦 Installing packages...
-⬇️  Downloading ffmpeg...
-⬇️  Downloading yt-dlp...
-✓ ffmpeg installed successfully
-✓ yt-dlp installed successfully
-✓ streamlit installed
-✓ pandas installed
-🚀 Building app...
-✅ Your app is live at: https://xxx.streamlit.app
-```
-
-**NE FERMEZ PAS cette page!** Attendez jusqu'à voir:
-```
-🎉 Your app is now live!
-```
-
----
-
-### **C. Votre app est EN LIGNE! 🎉**
-
-Streamlit vous donne l'URL:
-
-**Format:** `https://votre-username-youtube-video-cutter-xxxx.streamlit.app`
-
-**Exemple:** `https://lyra-dev-youtube-video-cutter-app-abc123.streamlit.app`
-
----
-
-## **ÉTAPE 4: Tester votre app**
-
-1. **Cliquez sur l'URL** ou copiez-la dans navigateur
-2. Vous voyez votre app avec:
-   - ✂️ Titre "YouTube Video Cutter"
-   - Zone upload CSV
-   - Instructions
-
-3. **Testez avec votre CSV:**
-   - Cliquez "Browse files"
-   - Sélectionnez votre CSV
-   - App affiche aperçu et statistiques
-   - Cliquez "LANCER LE DÉCOUPAGE"
-   - Attendez traitement
-   - Téléchargez ZIP! 🎉
-
----
-
-## **ÉTAPE 5: Partager votre app**
-
-**Votre app est publique!**
-
-Partagez l'URL avec qui vous voulez:
-- Collègues
-- Clients
-- Amis
-- Sur réseaux sociaux
-
-**Tout le monde peut l'utiliser gratuitement!**
-
----
-
-## **GESTION DE L'APP**
-
-### **Voir statistiques**
-
-1. Dashboard Streamlit Cloud
-2. Cliquez sur votre app
-3. Vous voyez:
-   - 📊 Nombre visiteurs
-   - 📈 Utilisation
-   - 🔧 Logs en temps réel
-
-### **Mettre à jour l'app**
-
-Modifiez code sur GitHub → App se redéploie **automatiquement**!
-
-1. Allez sur votre repo GitHub
-2. Cliquez sur `app.py`
-3. Cliquez icône **"Edit"** (crayon)
-4. Modifiez code
-5. Cliquez **"Commit changes"**
-6. Streamlit détecte changement et redéploie automatiquement! ✨
-
-### **Arrêter l'app**
-
-Si vous voulez:
-1. Dashboard Streamlit
-2. Cliquez sur app
-3. Settings → **"Delete app"**
-
----
-
-## **TROUBLESHOOTING**
-
-### **❌ "Repository not found"**
-
-**Solution:**
-1. Vérifiez repo est **Public** (pas Private)
-2. Sur GitHub repo → Settings → Change visibility to Public
-
----
-
-### **❌ "Error: yt-dlp not found"**
-
-**Solution:** 
-Modifiez `packages.txt` pour ajouter:
-```
-ffmpeg
-python3-pip
+┌─────────────────────────────────────┐
+│ 📁 youtube-video-cutter             │
+├─────────────────────────────────────┤
+│ 📄 README.md           2 minutes ago│
+│ 📄 app.py              1 minute ago │
+│ 📄 packages.txt        30 seconds ago│
+│ 📄 requirements.txt    10 seconds ago│
+└─────────────────────────────────────┘
