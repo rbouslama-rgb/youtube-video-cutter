@@ -1,0 +1,15 @@
+ffmpeg
+yt-dlp
+```
+
+4. **Scrollez en bas**, cliquez **"Commit new file"**
+
+---
+
+✅ **Maintenant vous avez les 4 fichiers!**
+```
+📁 youtube-video-cutter/
+   📄 README.md (vide - pas grave)
+   📄 app.py ✅
+   📄 packages.txt ✅ (nouveau)
+   📄 requirements.txt ✅
