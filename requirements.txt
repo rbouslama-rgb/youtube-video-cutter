@@ -1,3 +1,4 @@
 streamlit
 pandas
-yt-dlp
+pytube
+moviepy
